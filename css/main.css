@@ -1,13 +1,14 @@
-body {
-    font-family: "Comic Sans MS", "Comic Sans", cursive;
-}
-
 @font-face {
     font-family: 'ComicSans';
     src: url('../source/fonts/ComicSansMS.woff2') format('woff2');
     font-weight: normal;
     font-style: normal;
 }
+
+body {
+    font-family: 'ComicSans', "Comic Sans MS", "Comic Sans", cursive;
+}
+
 
 .chapter {
     font-size: 64px;
