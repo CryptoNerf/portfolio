@@ -48,7 +48,7 @@ th, td {
   height: auto;
   object-fit: cover;
   margin-bottom: 1rem;
-  border: 1px solid #000;
+  /* border: 1px solid #000; */
 }
 
 .card h2 {
@@ -64,19 +64,19 @@ th, td {
 }
 
 .card a {
-  text-decoration: none;
-  color: #000;
-  border: 1px solid #000;
+  /* text-decoration: none; */
+  /* color: #000; */
+  /* border: 1px solid #000; */
   padding: 0.5rem;
-  text-align: center;
-  font-size: 0.9rem;
-  transition: background 0.3s, color 0.3s;
+  /* text-align: center; */
+  /* font-size: 0.9rem; */
+  /* transition: background 0.3s, color 0.3s; */
 }
 
-.card a:hover {
+/* .card a:hover {
   background-color: #000;
   color: #fff;
-}
+} */
 
 .chapter {
     font-size: 64px;
@@ -100,14 +100,14 @@ th, td {
     grid-column: span 2;
     grid-row: span 2;
 }
-/* 
+
 .container {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 2rem;
   max-width: 1200px;
   margin: 0 auto;
-} */
+}
 
 .main-image {
   width: 66%;
@@ -209,6 +209,35 @@ table.specs th {
     height: 100%;
     object-fit: cover;
 }
+
+#preview {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  max-width: 400px;
+  /* max-height: 50vh; */
+  /* padding: 10px; */
+  z-index: 1000;
+  pointer-events: none;
+}
+
+#preview img {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  pointer-events: none;
+  
+}
+
+.preview-hidden {
+  display: none;
+}
+
+.preview-visible {
+  display: block;
+}
+
 
 @media (max-width: 768px) {
   .container {
