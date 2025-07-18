@@ -1,4 +1,3 @@
-/* Кнопка "Назад" для art.html */
 .back-btn {
   margin-left: 20px;
   display: inline-block;
@@ -200,6 +199,7 @@ table.specs th {
     max-width: 600px;
     position: relative;
     aspect-ratio: 16/9;
+    display: none;
 }
 
 .video-container video {
@@ -207,10 +207,12 @@ table.specs th {
     height: 100%;
     object-fit: cover;
 }
+
 #preview-container {
     position: relative;
     display: inline-block;
 }
+
 #preview {
     position: fixed;
     top: 0;
@@ -261,6 +263,7 @@ table.specs th {
 .preview-visible {
     display: flex !important;
 }
+
 footer {
     flex-shrink: 0;
     display: flex;
