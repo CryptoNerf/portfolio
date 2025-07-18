@@ -1,3 +1,11 @@
+/* Progressive image loading styles */
+.progressive-img {
+  filter: blur(8px);
+  transition: filter 0.5s;
+}
+.progressive-img.loaded {
+  filter: blur(0);
+}
 .back-btn {
   margin-left: 20px;
   display: inline-block;
