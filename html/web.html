@@ -101,23 +101,33 @@
   </div>
   
   <script>
-    const hoverImageContainer = document.getElementById('hover-image-container');
-    const hoverImage = document.getElementById('hover-image');
-    const imageLinks = document.querySelectorAll('a[data-image]');
+    // Проверка на сенсорное устройство
+    const isTouchDevice = () => {
+      return (('ontouchstart' in window) ||
+              (navigator.maxTouchPoints > 0) ||
+              (navigator.msMaxTouchPoints > 0));
+    };
     
-    imageLinks.forEach(link => {
-      link.addEventListener('mouseenter', function() {
-        const imageName = this.getAttribute('data-image');
-        hoverImage.src = '../source/img/web/' + imageName;
-        hoverImageContainer.classList.remove('hover-image-hidden');
-        hoverImageContainer.classList.add('hover-image-visible');
-      });
+    // Если не сенсорное устройство, добавляем ховер эффект
+    if (!isTouchDevice()) {
+      const hoverImageContainer = document.getElementById('hover-image-container');
+      const hoverImage = document.getElementById('hover-image');
+      const imageLinks = document.querySelectorAll('a[data-image]');
       
-      link.addEventListener('mouseleave', function() {
-        hoverImageContainer.classList.remove('hover-image-visible');
-        hoverImageContainer.classList.add('hover-image-hidden');
+      imageLinks.forEach(link => {
+        link.addEventListener('mouseenter', function() {
+          const imageName = this.getAttribute('data-image');
+          hoverImage.src = '../source/img/web/' + imageName;
+          hoverImageContainer.classList.remove('hover-image-hidden');
+          hoverImageContainer.classList.add('hover-image-visible');
+        });
+        
+        link.addEventListener('mouseleave', function() {
+          hoverImageContainer.classList.remove('hover-image-visible');
+          hoverImageContainer.classList.add('hover-image-hidden');
+        });
       });
-    });
+    }
   </script>
 </body>
 </html>
