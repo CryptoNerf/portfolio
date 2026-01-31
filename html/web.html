@@ -15,6 +15,12 @@
     <div class="main-content">
       <div class="info">
         <a href="../index.html"><p>Назад</p></a>
+        
+        <!-- Контейнер для ховер изображения -->
+        <div id="hover-image-container" class="hover-image-hidden">
+          <img id="hover-image" src="" alt="Website preview">
+        </div>
+        
         <table>
           <thead>
             <tr>
@@ -27,51 +33,57 @@
           <tbody>
             <tr>
               <td>Vi.Project</td>
-              <td>Графический редактор в котором графика создаётся при помощи жестов</td>
+              <td>Графический редактор в котором можно создавть графику при помощи жестов</td>
               <td class="tech-column">HTML, CSS, JavaScript, MediaPipe, WebRTC</td>
-              <td><a href="https://vi-project.vercel.app/" target="_blank">Перейти</a></td>
+              <td><a href="https://vi-project.vercel.app/" target="_blank" data-image="viproject.jpg">Перейти</a></td>
             </tr>
             <tr>
               <td>Jackalizer</td>
               <td>Сайт на котором можно прикольно шакалить фотки</td>
               <td class="tech-column">HTML, CSS, JavaScript</td>
-              <td><a href="https://jackalizer.vercel.app/" target="_blank">Перейти</a></td>
+              <td><a href="https://jackalizer.vercel.app/" target="_blank" data-image="jackalizer.png">Перейти</a></td>
             </tr>
             <tr>
               <td>HTML-GARDEN</td>
               <td>Сайт-сад растений из Garden-Generator</td>
               <td class="tech-column">HTML, CSS, JavaScript</td>
-              <td><a href="https://html-garden.vercel.app/index.html" target="_blank">Перейти</a></td>
+              <td><a href="https://html-garden.vercel.app/index.html" target="_blank" data-image="htmlgarden.png">Перейти</a></td>
             </tr>
             <tr>
               <td>Garden-Generator</td>
               <td>Приложение для генерации своего сада</td>
               <td class="tech-column">JavaScript, HTML/CSS, React, Vite</td>
-              <td><a href="https://plant-generator.vercel.app/" target="_blank">Перейти</a></td>
+              <td><a href="https://plant-generator.vercel.app/" target="_blank" data-image="gardengen.png">Перейти</a></td>
             </tr>
             <tr>
               <td>index.life</td>
               <td>Приложение для ведения дневника настроений</td>
               <td class="tech-column">HTML, CSS, Flask, SQLite</td>
-              <td><a href="https://github.com/CryptoNerf/index-life-local/releases/tag/v2.1.0" target="_blank">Перейти</a></td>
+              <td><a href="https://github.com/CryptoNerf/index-life-local/releases/tag/v2.1.0" target="_blank" data-image="index.png">Перейти</a></td>
             </tr>
             <tr>
               <td>ΔATA.V</td>
               <td>Авторский образовательный блокнот для сотрудника МФТИ</td>
               <td class="tech-column">HTML, CSS, JavaScript</td>
-              <td><a href="https://tovarischcomrad.github.io/YatsulevichVV/" target="_blank">Перейти</a></td>
+              <td><a href="https://tovarischcomrad.github.io/YatsulevichVV/" target="_blank" data-image="datav.png">Перейти</a></td>
             </tr>
             <tr>
               <td>Слабость Серого</td>
               <td>Сайт-кликер являющийся частью промо-компании для игральный карт "The Dragon of Chaos"</td>
               <td class="tech-column">HTML, CSS, JavaScript</td>
-              <td><a href="https://cryptonerf.github.io/sergey-s-weakness/" target="_blank">Перейти</a></td>
+              <td><a href="https://cryptonerf.github.io/sergey-s-weakness/" target="_blank" data-image="sery.png">Перейти</a></td>
             </tr>
             <tr>
               <td>Зажигалка BiC</td>
               <td>Сайт о том, что я купил зажигалку Bic</td>
               <td class="tech-column">HTML, CSS, JavaScript</td>
-              <td><a href="https://cryptonerf.github.io/nerf.file.fire/" target="_blank">Перейти</a></td>
+              <td><a href="https://cryptonerf.github.io/nerf.file.fire/" target="_blank" data-image="fire.png">Перейти</a></td>
+            </tr>
+            <tr>
+              <td>Logovo Store</td>
+              <td>Концепт-макет интернет-магазина виниловых пластинок</td>
+              <td class="tech-column">Figma</td>
+              <td><a href="https://www.behance.net/gallery/192581425/LogovoStore" target="_blank" data-image="logovo.png">Перейти</a></td>
             </tr>
             <tr>
               <td>Украшения Мари</td>
@@ -87,5 +99,25 @@
       <div class="copyright">Copyright 2026 Émile Alexanyan</div>
     </footer>
   </div>
+  
+  <script>
+    const hoverImageContainer = document.getElementById('hover-image-container');
+    const hoverImage = document.getElementById('hover-image');
+    const imageLinks = document.querySelectorAll('a[data-image]');
+    
+    imageLinks.forEach(link => {
+      link.addEventListener('mouseenter', function() {
+        const imageName = this.getAttribute('data-image');
+        hoverImage.src = '../source/img/web/' + imageName;
+        hoverImageContainer.classList.remove('hover-image-hidden');
+        hoverImageContainer.classList.add('hover-image-visible');
+      });
+      
+      link.addEventListener('mouseleave', function() {
+        hoverImageContainer.classList.remove('hover-image-visible');
+        hoverImageContainer.classList.add('hover-image-hidden');
+      });
+    });
+  </script>
 </body>
 </html>

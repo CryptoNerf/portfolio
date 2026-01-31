@@ -297,6 +297,41 @@ footer {
     }
 }
 
+/* Ховер эффект для изображений */
+#hover-image-container {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 500;
+    max-width: 600px;
+    max-height: 600px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#hover-image {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    /* border: 2px solid #000; */
+    /* border-radius: 8px; */
+    /* box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); */
+}
+
+.hover-image-hidden {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.hover-image-visible {
+    opacity: 1;
+    pointer-events: auto;
+    transition: opacity 0.3s ease;
+}
+
 
 
 @media (max-width: 768px) {
