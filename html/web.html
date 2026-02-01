@@ -113,16 +113,35 @@
       const hoverImageContainer = document.getElementById('hover-image-container');
       const hoverImage = document.getElementById('hover-image');
       const imageLinks = document.querySelectorAll('a[data-image]');
+      let currentImageName = null;
       
       imageLinks.forEach(link => {
         link.addEventListener('mouseenter', function() {
           const imageName = this.getAttribute('data-image');
-          hoverImage.src = '../source/img/web/' + imageName;
-          hoverImageContainer.classList.remove('hover-image-hidden');
-          hoverImageContainer.classList.add('hover-image-visible');
+          
+          // Если это другое изображение, загружаем новое
+          if (imageName !== currentImageName) {
+            currentImageName = imageName;
+            
+            // Создаем новый объект Image для предзагрузки
+            const tempImg = new Image();
+            tempImg.onload = function() {
+              // Проверяем, что это все еще актуальное изображение
+              if (currentImageName === imageName) {
+                hoverImage.src = '../source/img/web/' + imageName;
+                hoverImageContainer.classList.remove('hover-image-hidden');
+                hoverImageContainer.classList.add('hover-image-visible');
+              }
+            };
+            tempImg.onerror = function() {
+              currentImageName = null;
+            };
+            tempImg.src = '../source/img/web/' + imageName;
+          }
         });
         
         link.addEventListener('mouseleave', function() {
+          currentImageName = null;
           hoverImageContainer.classList.remove('hover-image-visible');
           hoverImageContainer.classList.add('hover-image-hidden');
         });
