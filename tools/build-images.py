@@ -18,6 +18,7 @@
 """
 
 import io
+import math
 import os
 import re
 import glob
@@ -159,17 +160,31 @@ def out_path(root, src, ext=None):
     return out
 
 
+def flatten(im):
+    """Убрать альфу, положив картинку на чёрное.
+
+    convert("RGB") просто выбрасывает альфа-канал, из-за чего прозрачный фон
+    становился белым. Галерея у нас чёрная, поэтому подкладываем чёрный —
+    так же, как при сборке mp4 из анимаций.
+    """
+    if im.mode not in ("RGBA", "LA") and "transparency" not in im.info:
+        return im.convert("RGB")
+    rgba = im.convert("RGBA")
+    backdrop = Image.new("RGBA", rgba.size, (0, 0, 0, 255))
+    return Image.alpha_composite(backdrop, rgba).convert("RGB")
+
+
 def save_low(im, src, dst):
     """Плейсхолдер в формате оригинала: PNG квантуется до 64 цветов, JPEG жмётся."""
     small = im.copy()
     small.thumbnail((LOW_EDGE, LOW_EDGE), Image.LANCZOS)
     ext = os.path.splitext(dst)[1].lower()
     if ext in (".jpg", ".jpeg"):
-        small.convert("RGB").save(dst, "JPEG", quality=42, optimize=True)
+        flatten(small).save(dst, "JPEG", quality=42, optimize=True)
     elif ext == ".webp":
         small.save(dst, "WEBP", quality=45, method=6)
     elif ext == ".gif":
-        small.convert("RGB").convert(
+        flatten(small).convert(
             "P", palette=Image.ADAPTIVE, colors=64
         ).save(dst, "GIF", optimize=True)
     else:
@@ -193,16 +208,49 @@ def ffmpeg(args):
     )
 
 
-def convert_animation(src):
-    """GIF/APNG -> mp4. Высота выравнивается до чётной, иначе h264 не соберётся.
+def frame_delays(im):
+    """Задержки кадров анимации в миллисекундах."""
+    delays = []
+    for i in range(im.n_frames):
+        im.seek(i)
+        delays.append(int(im.info.get("duration", 100)) or 100)
+    im.seek(0)
+    return delays
 
-    Только h264/yuv420p: он играет во всех браузерах и декодируется железом,
-    поэтому второй вариант в webm был бы мёртвым весом в репозитории.
+
+def animation_fps(delays):
+    """Частота, на которой задержки укладываются без дробей.
+
+    У o.gif кадры идут по 60 и 200 мс — оба делятся на 20 мс, то есть 50 fps
+    воспроизводит анимацию с исходным ритмом. Выше 50 не поднимаемся: файл
+    растёт, а глазу это уже не нужно.
+    """
+    step = 0
+    for d in delays:
+        step = math.gcd(step, d)
+    return max(1, min(50, round(1000 / step))) if step else 25
+
+
+def convert_animation(src, size, delays):
+    """GIF/APNG -> mp4 поверх чёрного фона.
+
+    Просто перевести в yuv420p нельзя: альфа-канал при этом отбрасывается, и
+    прозрачный фон o.gif становился белым, а мягкое свечение html-garden
+    обрезалось жёстким кругом. Поэтому кадры кладём на чёрную подложку —
+    страница галереи тоже чёрная, так что результат совпадает с исходным видом.
     """
     mp4 = out_path(OPT, src, ".mp4")
     if fresh(src, mp4):
         return mp4, False
-    ffmpeg(["-i", src, "-vf", f"scale='min({OPT_EDGE},iw)':-2:flags=lanczos",
+    width, height = size
+    fps = animation_fps(delays)
+    chain = (
+        f"color=c=black:s={width}x{height}:r={fps},format=yuv420p[bg];"
+        f"[0:v]format=yuva420p,fps={fps}[fg];"
+        f"[bg][fg]overlay=shortest=1,"
+        f"scale='min({OPT_EDGE},iw)':-2:flags=lanczos,format=yuv420p[v]"
+    )
+    ffmpeg(["-i", src, "-filter_complex", chain, "-map", "[v]",
             "-c:v", "libx264", "-crf", "26", "-pix_fmt", "yuv420p",
             "-movflags", "+faststart", "-an", mp4])
     return mp4, True
@@ -234,7 +282,8 @@ def main():
         before += src_size
 
         if animated:
-            mp4, did = convert_animation(src)
+            delays = frame_delays(raw)
+            mp4, did = convert_animation(src, raw.size, delays)
             raw.seek(0)
             frame = raw.convert("RGBA")
             opt_poster = out_path(OPT, src, ".webp")
