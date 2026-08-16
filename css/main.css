@@ -1,10 +1,34 @@
-/* Progressive image loading styles */
+/* Прогрессивная загрузка: сначала показывается плейсхолдер из source/img/low/
+   (около килобайта), затем скрипт js/lazy-media.js подменяет его полной версией. */
 .progressive-img {
   filter: blur(8px);
-  transition: filter 0.5s;
+  transition: filter 0.4s ease-out, transform 0.4s ease-out;
 }
 .progressive-img.loaded {
   filter: blur(0);
+}
+
+/* Ширина задаётся здесь, а не атрибутом width="100%": атрибуты width/height в
+   разметке хранят настоящие пропорции картинки, браузер заранее резервирует
+   под неё место, и страница не прыгает по мере загрузки. */
+.gallery img,
+.gallery video {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Размытие у плейсхолдера захватывает края, поэтому чуть увеличиваем его
+   и подрезаем контейнером. */
+.gallery > div {
+  overflow: hidden;
+}
+.gallery img.progressive-img:not(.loaded) {
+  transform: scale(1.04);
+}
+
+.thumbnails img {
+  height: auto;
 }
 .back-btn {
   margin-left: 20px;
