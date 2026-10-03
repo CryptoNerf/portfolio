@@ -23,6 +23,7 @@ import math
 import os
 import re
 import glob
+import hashlib
 import shutil
 import subprocess
 import sys
@@ -490,6 +491,38 @@ def build_promo():
     print(f"  промо: {human(before)} -> {human(after)}, список в {web_path(PROMO_DATA)}")
 
 
+def stamp_assets():
+    """Дописать к ссылкам на свои css/js метку версии: main.css?v=<хеш>.
+
+    GitHub Pages разрешает браузеру 10 минут не перепроверять файлы. Сразу
+    после пуша телефон брал новую страницу со старым main.css из кэша — и
+    страница разваливалась. Метка меняется вместе с содержимым файла, поэтому
+    изменённый файл браузер обязан скачать заново, а неизменённый берёт из кэша.
+    """
+    pages = [os.path.join(ROOT, "index.html")] + sorted(
+        glob.glob(os.path.join(ROOT, "html", "*.html"))
+    )
+    pattern = re.compile(
+        r'((?:href|src)\s*=\s*")([^"?#:]+\.(?:css|js))(?:\?v=[0-9a-f]*)?(")'
+    )
+    for page in pages:
+        base = os.path.dirname(page)
+        html = open(page, encoding="utf-8").read()
+
+        def stamp(m):
+            path = os.path.normpath(os.path.join(base, m.group(2)))
+            if not os.path.isfile(path):
+                return m.group(0)
+            digest = hashlib.md5(open(path, "rb").read()).hexdigest()[:8]
+            return f"{m.group(1)}{m.group(2)}?v={digest}{m.group(3)}"
+
+        stamped = pattern.sub(stamp, html)
+        if stamped != html:
+            with open(page, "w", encoding="utf-8") as fh:
+                fh.write(stamped)
+            print(f"  версии css/js обновлены: {os.path.relpath(page, ROOT)}")
+
+
 def main():
     sources = collect_sources()
     thumb_stems = collect_thumb_stems()
@@ -558,6 +591,9 @@ def main():
 
     print()
     build_promo()
+    # После build_promo: он переписывает js/promo-data.js, метка должна
+    # соответствовать уже новому файлу.
+    stamp_assets()
 
     print(f"\nПересобрано файлов: {built}")
     print(f"Оригиналы:            {human(before)}")
