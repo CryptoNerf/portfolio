@@ -1,0 +1,27 @@
+# Порядок материалов в ленте: один файл на строку, сверху вниз.
+# Строки с # не учитываются. После правки: python3 tools/build-images.py
+родныепаразиты.jpeg
+ничигоникогданебыло.jpeg
+лёгкаяпростуда.jpeg
+вооброжаемаярадость.jpeg
+лёгкийветернатвоихщеках.jpeg
+summerday.jpeg
+АлексанянЭмильx10000000.jpeg
+эточистыйкайфбрат.jpeg
+сомнительнаяуязвимость.jpeg
+Autumn.png
+spring.png
+summer.png
+winter.png
+trees.jpg
+weeds.jpg
+bash.jpg
+Flowers 2.jpg
+flowers.jpg
+Frame 61.jpg
+gardengen.jpg
+Grass.jpg
+image 26.jpg
+psylocibintree.jpg
+любовь.mp4
+screenshot.png

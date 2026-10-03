@@ -1,2 +1,15 @@
 .DS_Store
 **/.DS_Store
+
+# Исходники промо: сайт показывает только собранные версии из source/img/promo/,
+# а оригиналы весят ~100 МБ. Хранятся локально, в репозиторий не идут.
+promo-web/*
+promo-project/*
+# order.txt задаёт порядок материалов на сайте — его храним
+!promo-web/*/
+!promo-project/*/
+promo-web/*/*
+promo-project/*/*
+!promo-web/*/order.txt
+!promo-project/*/order.txt
+__pycache__/

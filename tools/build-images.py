@@ -18,6 +18,7 @@
 """
 
 import io
+import json
 import math
 import os
 import re
@@ -25,6 +26,7 @@ import glob
 import shutil
 import subprocess
 import sys
+import unicodedata
 
 from PIL import Image, ImageOps
 
@@ -160,17 +162,18 @@ def out_path(root, src, ext=None):
     return out
 
 
-def flatten(im):
+def flatten(im, color=(0, 0, 0)):
     """Убрать альфу, положив картинку на чёрное.
 
     convert("RGB") просто выбрасывает альфа-канал, из-за чего прозрачный фон
     становился белым. Галерея у нас чёрная, поэтому подкладываем чёрный —
-    так же, как при сборке mp4 из анимаций.
+    так же, как при сборке mp4 из анимаций. Промо показываются на белой
+    странице web, им передаётся белый.
     """
     if im.mode not in ("RGBA", "LA") and "transparency" not in im.info:
         return im.convert("RGB")
     rgba = im.convert("RGBA")
-    backdrop = Image.new("RGBA", rgba.size, (0, 0, 0, 255))
+    backdrop = Image.new("RGBA", rgba.size, color + (255,))
     return Image.alpha_composite(backdrop, rgba).convert("RGB")
 
 
@@ -260,6 +263,233 @@ def human(n):
     return f"{n / 1024 / 1024:.2f} MB" if n >= 1024 * 1024 else f"{n / 1024:.0f} KB"
 
 
+# --- Промо-материалы веб-проектов -------------------------------------------
+#
+# promo-web/<Проект>/ и promo-project/<Проект>/ — оригиналы для разделов web
+# и project, как их выгрузили из макетов и монтажки. На страницах они не
+# перечисляются руками: скрипт собирает версии в source/img/promo/<Проект>/
+# и пишет их список в js/promo-data.js, а страница ссылается на проект
+# атрибутом data-promo="<Проект>". Имена папок проектов не должны совпадать
+# между promo-web/ и promo-project/.
+#
+# Порядок в ленте задаёт promo-web/<Проект>/order.txt — по имени файла на
+# строку. Переименовывать файлы ради порядка нельзя: имя файла показывается
+# подписью под материалом. Файлы, которых нет в order.txt, встают в конец
+# по имени (2 раньше 10); без order.txt по имени идёт весь проект.
+
+PROMO_SOURCES = [os.path.join(ROOT, d) for d in ("promo-web", "promo-project")]
+PROMO_OUT = os.path.join(IMG, "promo")
+PROMO_DATA = os.path.join(ROOT, "js", "promo-data.js")
+# Лента промо — 280 CSS-px в высоту, миниатюры берём вдвое выше под ретину.
+PROMO_THUMB_HEIGHT = 560
+PROMO_VIDEO_EDGE = 1280
+# Превью для плитки: крутится без звука, поэтому хватает начала ролика
+# в небольшом размере. Полный ролик качается только в просмотре.
+PROMO_PREVIEW_HEIGHT = 360
+PROMO_PREVIEW_SECONDS = 12
+WHITE = (255, 255, 255)
+
+
+PROMO_ORDER = "order.txt"
+
+
+def natural_key(name):
+    return [int(t) if t.isdigit() else t.lower() for t in re.split(r"(\d+)", name)]
+
+
+def promo_path(project, kind, src, ext):
+    # Имя в обычной форме Unicode: git на маке коммитит именно её, и ссылка
+    # с разложенной «ё» на GitHub Pages вела бы в пустоту.
+    stem = os.path.splitext(display_name(src))[0]
+    out = os.path.join(PROMO_OUT, project, kind, stem + ext)
+    os.makedirs(os.path.dirname(out), exist_ok=True)
+    return out
+
+
+def web_path(path):
+    return os.path.relpath(path, ROOT).replace(os.sep, "/")
+
+
+def probe_video(path):
+    out = subprocess.run(
+        ["ffprobe", "-v", "error", "-select_streams", "v:0",
+         "-show_entries", "stream=width,height:format=duration",
+         "-of", "default=noprint_wrappers=1", path],
+        check=True, capture_output=True, text=True,
+    ).stdout
+    info = dict(line.split("=", 1) for line in out.split() if "=" in line)
+    return int(info["width"]), int(info["height"]), float(info.get("duration", 0))
+
+
+def build_promo_image(project, src):
+    im = flatten(ImageOps.exif_transpose(Image.open(src)), WHITE)
+    low = promo_path(project, "low", src, ".jpg")
+    thumb = promo_path(project, "thumb", src, ".webp")
+    full = promo_path(project, "opt", src, ".webp")
+    if not fresh(src, low):
+        small = im.copy()
+        small.thumbnail((LOW_EDGE, LOW_EDGE), Image.LANCZOS)
+        small.save(low, "JPEG", quality=42, optimize=True)
+    if not fresh(src, thumb):
+        strip = im.copy()
+        strip.thumbnail((OPT_EDGE, PROMO_THUMB_HEIGHT), Image.LANCZOS)
+        strip.save(thumb, "WEBP", quality=THUMB_QUALITY, method=6)
+    if not fresh(src, full):
+        save_webp(im, full, OPT_EDGE, OPT_QUALITY)
+    return {
+        "type": "img", "name": display_name(src), "w": im.width, "h": im.height,
+        "low": web_path(low), "thumb": web_path(thumb), "full": web_path(full),
+    }, os.path.getsize(thumb) + os.path.getsize(full)
+
+
+def build_promo_video(project, src):
+    """Ролик ужимаем до 1280 px и ставим moov в начало, чтобы старт был сразу.
+
+    Для плитки отдельно собирается лёгкое превью: без него автозапуск в
+    ленте качал полный ролик со звуком — до 4 МБ на плитку высотой 280px.
+
+    Постер берём не с первого кадра — у промо он часто чёрный (затемнение).
+    """
+    mp4 = promo_path(project, "opt", src, ".mp4")
+    preview = promo_path(project, "thumb", src, ".mp4")
+    poster = promo_path(project, "thumb", src, ".jpg")
+    if not fresh(src, mp4):
+        ffmpeg(["-i", src,
+                "-vf", f"scale='min({PROMO_VIDEO_EDGE},iw)':-2:flags=lanczos",
+                "-c:v", "libx264", "-crf", "26", "-preset", "slow",
+                "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "96k",
+                "-movflags", "+faststart", mp4])
+    if not fresh(src, preview):
+        ffmpeg(["-i", mp4, "-t", str(PROMO_PREVIEW_SECONDS),
+                "-vf", f"scale=-2:'min({PROMO_PREVIEW_HEIGHT},ih)':flags=lanczos",
+                "-c:v", "libx264", "-crf", "30", "-preset", "slow",
+                "-pix_fmt", "yuv420p", "-an", "-movflags", "+faststart", preview])
+    width, height, duration = probe_video(mp4)
+    if not fresh(src, poster):
+        ffmpeg(["-ss", f"{min(1.0, duration / 3):.2f}", "-i", mp4,
+                "-frames:v", "1",
+                "-vf", f"scale=-2:'min({PROMO_THUMB_HEIGHT},ih)':flags=lanczos",
+                "-q:v", "4", poster])
+    return {
+        "type": "video", "name": display_name(src),
+        "w": width, "h": height, "d": round(duration),
+        "poster": web_path(poster), "preview": web_path(preview), "src": web_path(mp4),
+    }, os.path.getsize(mp4) + os.path.getsize(preview) + os.path.getsize(poster)
+
+
+def display_name(src):
+    # macOS отдаёт кириллицу в разложенном виде (й = и + ˘), а в подписи
+    # и в order.txt нужна обычная запись.
+    return unicodedata.normalize("NFC", os.path.basename(src))
+
+
+def promo_order(folder):
+    """Имена файлов проекта в порядке order.txt, остальные — в конец по имени."""
+    files = {
+        unicodedata.normalize("NFC", n): n
+        for n in os.listdir(folder)
+        if os.path.splitext(n)[1].lower() in RASTER + VIDEO
+    }
+    order_file = os.path.join(folder, PROMO_ORDER)
+    listed = []
+    if os.path.exists(order_file):
+        for line in open(order_file, encoding="utf-8"):
+            name = unicodedata.normalize("NFC", line.strip())
+            if not name or name.startswith("#"):
+                continue
+            if name in files and name not in listed:
+                listed.append(name)
+            elif name not in files:
+                print(f"  order.txt: нет файла {os.path.basename(folder)}/{name}")
+    rest = sorted((n for n in files if n not in listed), key=natural_key)
+    if listed and rest:
+        print(f"  order.txt: не перечислены в {os.path.basename(folder)}, "
+              f"идут в конец: {', '.join(rest)}")
+    return [files[n] for n in listed + rest]
+
+
+def prune_promo(data):
+    """Убрать из source/img/promo/ версии файлов, которых больше нет в promo-web/.
+
+    После переименования или удаления промо старые webp/mp4 никто не открывает,
+    но они уезжали бы в репозиторий и на хостинг.
+    """
+    keep = set()
+    for items in data.values():
+        for item in items:
+            for key in ("low", "thumb", "full", "poster", "preview", "src"):
+                if key in item:
+                    keep.add(unicodedata.normalize("NFC", item[key]))
+    removed = 0
+    for folder, _, files in os.walk(PROMO_OUT, topdown=False):
+        for name in files:
+            path = os.path.join(folder, name)
+            if unicodedata.normalize("NFC", web_path(path)) not in keep:
+                os.remove(path)
+                removed += 1
+        if folder != PROMO_OUT and not os.listdir(folder):
+            os.rmdir(folder)
+    if removed:
+        print(f"  промо: удалено устаревших версий: {removed}")
+
+
+def promo_projects():
+    """Папки проектов из всех источников промо: (имя, путь)."""
+    found = {}
+    for source in PROMO_SOURCES:
+        if not os.path.isdir(source):
+            continue
+        for project in sorted(os.listdir(source), key=natural_key):
+            folder = os.path.join(source, project)
+            if not os.path.isdir(folder):
+                continue
+            if project in found:
+                print(f"  ПРОМО ПРОПУСК {web_path(folder)}: проект с таким именем "
+                      f"уже есть в {web_path(found[project])}")
+                continue
+            found[project] = folder
+    return found.items()
+
+
+def build_promo():
+    # Без исходников нечего собирать — и нечего «чистить»: иначе prune_promo
+    # снёс бы все собранные версии.
+    if not any(os.path.isdir(source) for source in PROMO_SOURCES):
+        return
+    data = {}
+    before = after = 0
+    for project, folder in promo_projects():
+        items = []
+        for name in promo_order(folder):
+            src = os.path.join(folder, name)
+            ext = os.path.splitext(name)[1].lower()
+            try:
+                if ext in RASTER:
+                    item, size = build_promo_image(project, src)
+                elif ext in VIDEO:
+                    item, size = build_promo_video(project, src)
+                else:
+                    continue
+            except Exception as exc:
+                print(f"  ПРОМО ПРОПУСК {os.path.relpath(src, ROOT)}: {exc}")
+                continue
+            items.append(item)
+            before += os.path.getsize(src)
+            after += size
+        if items:
+            data[project] = items
+            print(f"  промо {project}: {len(items)} шт.")
+
+    prune_promo(data)
+
+    with open(PROMO_DATA, "w", encoding="utf-8") as fh:
+        fh.write("// Собрано tools/build-images.py из promo-web/ и promo-project/ — руками не править.\n")
+        fh.write("window.PROMO = ")
+        json.dump(data, fh, ensure_ascii=False, indent=1)
+        fh.write(";\n")
+    print(f"  промо: {human(before)} -> {human(after)}, список в {web_path(PROMO_DATA)}")
+
+
 def main():
     sources = collect_sources()
     thumb_stems = collect_thumb_stems()
@@ -325,6 +555,9 @@ def main():
         if did:
             print(f"  постер {os.path.relpath(dst, ROOT)} "
                   f"({os.path.getsize(dst) / 1024:.1f} КБ)")
+
+    print()
+    build_promo()
 
     print(f"\nПересобрано файлов: {built}")
     print(f"Оригиналы:            {human(before)}")

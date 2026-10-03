@@ -1,0 +1,9 @@
+# Порядок материалов: один файл на строку, сверху вниз.
+# Строки с # не учитываются. После правки: python3 tools/build-images.py
+poster.jpg
+screen.png
+2026-09-09.mp4
+loveart.mp4
+rock fun.mp4
+rock fun2.mp4
+space fun.mp4

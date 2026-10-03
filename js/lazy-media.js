@@ -98,14 +98,48 @@
     }
   }
 
-  function init() {
-    var images = document.querySelectorAll('img.progressive-img[data-src]');
-    var videos = document.querySelectorAll('video.lazy-video');
+  var imageWatcher = null;
+  var videoWatcher = null;
+
+  function setup() {
+    if (imageWatcher || !('IntersectionObserver' in window)) {
+      return;
+    }
+
+    imageWatcher = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          imageWatcher.unobserve(entry.target);
+          loadImage(entry.target);
+        }
+      });
+    }, { rootMargin: PRELOAD_MARGIN });
+
+    // Видео держим на паузе за пределами экрана: иначе несколько роликов
+    // качаются и декодируются одновременно и отнимают канал у картинок.
+    videoWatcher = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          playVideo(entry.target);
+        } else if (entry.target.getAttribute('data-state')) {
+          entry.target.pause();
+        }
+      });
+    }, { rootMargin: '200px 0px' });
+  }
+
+  // Подхватить картинки и видео внутри root. Страница web достраивает ленты
+  // промо уже после загрузки, поэтому вызывает это сама для новых блоков.
+  function observe(root) {
+    var images = root.querySelectorAll('img.progressive-img[data-src]');
+    var videos = root.querySelectorAll('video.lazy-video');
     var i;
+
+    setup();
 
     // Старые браузеры без IntersectionObserver: грузим всё, но по очереди,
     // чтобы хотя бы не устраивать лавину запросов.
-    if (!('IntersectionObserver' in window)) {
+    if (!imageWatcher) {
       for (i = 0; i < images.length; i += 1) {
         loadImage(images[i]);
       }
@@ -115,35 +149,19 @@
       return;
     }
 
-    var imageWatcher = new IntersectionObserver(function (entries) {
-      entries.forEach(function (entry) {
-        if (entry.isIntersecting) {
-          imageWatcher.unobserve(entry.target);
-          loadImage(entry.target);
-        }
-      });
-    }, { rootMargin: PRELOAD_MARGIN });
-
     for (i = 0; i < images.length; i += 1) {
       imageWatcher.observe(images[i]);
     }
-
-    // Видео держим на паузе за пределами экрана: иначе несколько роликов
-    // качаются и декодируются одновременно и отнимают канал у картинок.
-    var videoWatcher = new IntersectionObserver(function (entries) {
-      entries.forEach(function (entry) {
-        if (entry.isIntersecting) {
-          playVideo(entry.target);
-        } else if (entry.target.getAttribute('data-state')) {
-          entry.target.pause();
-        }
-      });
-    }, { rootMargin: '200px 0px' });
-
     for (i = 0; i < videos.length; i += 1) {
       videoWatcher.observe(videos[i]);
     }
   }
+
+  function init() {
+    observe(document);
+  }
+
+  window.LazyMedia = { observe: observe };
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);

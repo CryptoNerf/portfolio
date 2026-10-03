@@ -1,0 +1,18 @@
+# Порядок материалов в ленте: один файл на строку, сверху вниз.
+# Строки с # не учитываются. После правки: python3 tools/build-images.py
+AiPsychologist.mp4
+customization.mp4
+neural-map.mp4
+graphics.mp4
+index31gif.mp4
+log.mov
+screen1.png
+screen2.png
+screen3.png
+screen4.png
+screen5.png
+screen6.png
+screen7.png
+indexmeme2.jpg
+indexmeme3.jpg
+indexmeme.jpg

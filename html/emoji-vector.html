@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../css/main.css">
+    <meta property="og:title" content="Emile Alexanyan Portfolio" />
+    <meta property="og:image" content="https://raw.githubusercontent.com/CryptoNerf/portfolio/main/source/img/pr.png" />
+    <meta property="og:url" content="https://cryptonerf.github.io/portfolio/" />
+    <link rel="icon" href="/portfolio/source/img/titlepng.png" type="image/png">
+    <title>Apple Emoji Vector Emile</title>
+    <script src="../js/lazy-media.js" defer></script>
+    <script src="../js/promo-data.js" defer></script>
+    <script src="../js/promo.js" defer></script>
+</head>
+<body>
+  <div class="body-wrapper">
+    <div class="main-content">
+      <div class="info">
+        <a href="project.html"><p>Назад</p></a>
+
+        <div class="container">
+          <!-- Левая часть: промо из promo-project/figmadesk/, порядок — в его order.txt -->
+          <div class="promo-gallery" data-promo="figmadesk" data-promo-name="Apple Emoji Vector"></div>
+
+          <!-- Правая часть -->
+          <div>
+            <h1 class="product-title">Apple Emoji: Unofficial Vector Collection</h1>
+            <p class="product-meta">2026 / Графический дизайн / Figma</p>
+
+            <div class="product-description">
+              <p>Я большой фанат эмодзи. Недавно мне понадобилось векторное представление эмодзи-глифа, и, отправившись на поиски векторных вариантов в интернете, я с удивлением обнаружил, что их нет. Вернее, какие-то варианты есть, но привычные эмодзи от Apple в векторном формате отсутствуют в открытом доступе.</p>
+              <p>Поэтому я решил самостоятельно реализовать 3842 эмодзи-глифа в векторном формате. Преобразовывал их с помощью алгоритма, и качество векторизации не везде идеальное, но в общем и целом получилось достаточно хорошо.</p>
+              <p>По Figma-доске можно быстро перемещаться и удобно находить нужный глиф. Сами глифы имеют осмысленные названия и отсортированы по категориям.</p>
+              <p>Надеюсь, вам будет полезно!</p>
+            </div>
+
+            <h2>Технические характеристики</h2>
+            <table class="specs">
+              <tr><th>Тип проекта</th><td>Ресурс для графических дизайнеров</td></tr>
+              <tr><th>Инструменты</th><td>Figma</td></tr>
+              <tr><th>Количество</th><td>3842 эмодзи-глифа</td></tr>
+              <tr><th>Разделы</th><td>10, по классификации Unicode</td></tr>
+              <tr><th>Дата</th><td>2026</td></tr>
+              <tr><th>Ссылка</th><td><a href="https://www.figma.com/design/PfrmnNlARrh2iqDU0ZZqck/EmojiVector?node-id=0-1" target="_blank">Открыть в Figma</a></td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    <footer class="footer">
+      <div class="copyright">Copyright 2026 Émile Alexanyan</div>
+    </footer>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      var gallery = document.querySelector('.promo-gallery');
+      Promo.fill(gallery, gallery.getAttribute('data-promo'));
+    });
+  </script>
+</body>
+</html>

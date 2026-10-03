@@ -421,3 +421,265 @@ footer {
     }
 }
 }
+
+/* ---------- Промо веб-проектов (html/web.html) ----------
+   Плитки и просмотр собирает js/promo.js из списка js/promo-data.js. */
+
+/* Кнопки выглядят как остальные ссылки таблицы — системным цветом ссылки. */
+.promo-toggle {
+    font: inherit;
+    color: LinkText;
+    text-decoration: underline;
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.promo-cell {
+    white-space: nowrap;
+}
+
+/* Копия кнопки под названием проекта — для телефона, где колонке «Промо»
+   не хватает места (технологии там уже скрыты по той же границе 600px). */
+.promo-inline {
+    display: none;
+    margin-top: 4px;
+}
+@media (max-width: 600px) {
+    .promo-cell {
+        display: none;
+    }
+    .promo-inline {
+        display: inline-block;
+    }
+}
+
+/* Плитка: высота задаётся лентой или шириной колонки, вторую сторону
+   браузер считает из aspect-ratio, так что место резервируется сразу. */
+.promo-tile {
+    position: relative;
+    display: block;
+    flex: none;
+    padding: 0;
+    border: 1px solid #000;
+    background: #fff;
+    overflow: hidden;
+    cursor: zoom-in;
+}
+.promo-tile img,
+.promo-tile video {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.promo-tile img.progressive-img:not(.loaded) {
+    transform: scale(1.04);
+}
+.promo-tile__badge {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    padding: 2px 6px;
+    background: #000;
+    color: #fff;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+/* Полноэкранный просмотр: та же белая страница с чёрными линиями. */
+/* Только html: у body здесь height: 100%, и overflow на нём схлопнул бы
+   документ до высоты окна — страница отпрыгивала бы наверх. */
+.promo-locked {
+    overflow: hidden;
+}
+.promo-box {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    background: #fff;
+}
+.promo-box[hidden] {
+    display: none;
+}
+.promo-box__bar,
+.promo-box__foot {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 12px 20px;
+}
+.promo-box__bar {
+    border-bottom: 1px solid #000;
+}
+.promo-box__foot {
+    justify-content: space-between;
+    border-top: 1px solid #000;
+}
+.promo-box__title {
+    font-weight: bold;
+}
+.promo-box__file {
+    margin-right: auto;
+    color: rgb(110, 110, 110);
+    overflow-wrap: anywhere;
+}
+.promo-box__btn {
+    font: inherit;
+    color: #000;
+    background: #fff;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+}
+.promo-box__btn:hover {
+    text-decoration: underline;
+}
+.promo-box__stage {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr) 64px;
+    min-height: 0;
+}
+.promo-box__nav {
+    font-size: 28px;
+}
+.promo-box__nav:first-child {
+    border-right: 1px solid #000;
+}
+.promo-box__nav:last-child {
+    border-left: 1px solid #000;
+}
+.promo-box__nav:hover {
+    background: #000;
+    color: #fff;
+    text-decoration: none;
+}
+.promo-box__media {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+    padding: 20px;
+}
+.promo-box__media img,
+.promo-box__media video {
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+@media (max-width: 768px) {
+    .promo-box__bar,
+    .promo-box__foot {
+        padding: 10px;
+        gap: 10px;
+        font-size: 14px;
+    }
+    /* На телефоне листают свайпом, стрелки только отнимают ширину. */
+    .promo-box__stage {
+        grid-template-columns: minmax(0, 1fr);
+    }
+    .promo-box__nav {
+        display: none;
+    }
+    .promo-box__media {
+        padding: 10px;
+    }
+}
+
+/* Строка таблицы раскрывается лентой материалов. */
+
+.promo-row > td {
+    padding: 0;
+}
+/* 0fr -> 1fr: анимация высоты без замера содержимого. */
+/* width: 0 + min-width: 100% — лента не участвует в расчёте ширины таблицы,
+   иначе её плитки распирали бы таблицу за край экрана на телефоне. */
+.promo-row__inner {
+    width: 0;
+    min-width: 100%;
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.3s ease;
+}
+.promo-row.open .promo-row__inner {
+    grid-template-rows: 1fr;
+}
+.promo-row__clip {
+    min-height: 0;
+    overflow: hidden;
+}
+.promo-strip__bar {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 8px 12px;
+    border-bottom: 1px solid #000;
+    font-size: 14px;
+}
+.promo-strip__bar span {
+    margin-right: auto;
+}
+.promo-strip {
+    display: flex;
+    gap: 12px;
+    padding: 12px;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scroll-padding: 12px;
+}
+.promo-item {
+    flex: none;
+    margin: 0;
+    scroll-snap-align: start;
+}
+.promo-strip .promo-tile {
+    height: 280px;
+}
+/* Подпись не должна раздвигать плитку: ширину задаёт картинка,
+   длинное имя файла переносится. */
+.promo-item figcaption {
+    width: 0;
+    min-width: 100%;
+    margin-top: 6px;
+    font-size: 13px;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+tr[data-promo].has-promo {
+    cursor: pointer;
+}
+
+@media (max-width: 768px) {
+    .promo-strip .promo-tile {
+        height: 200px;
+    }
+    .promo-strip__bar .promo-scroll {
+        display: none;
+    }
+}
+
+/* Галерея промо на странице проекта (html/emoji-vector.html): колонки вместо
+   сетки, чтобы материалы разной высоты ложились без дыр. */
+.promo-gallery {
+    columns: 2;
+    column-gap: 12px;
+}
+.promo-gallery .promo-item {
+    margin-bottom: 16px;
+    break-inside: avoid;
+}
+.promo-gallery .promo-tile {
+    width: 100%;
+}
+
+@media (max-width: 600px) {
+    .promo-gallery {
+        columns: 1;
+    }
+}
