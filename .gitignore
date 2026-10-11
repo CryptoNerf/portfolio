@@ -13,3 +13,10 @@ promo-project/*/*
 !promo-web/*/order.txt
 !promo-project/*/order.txt
 __pycache__/
+
+# Оригиналы случайных фото для главной: ~150 МБ и GPS-метки в EXIF.
+# На сайт идут только собранные webp из source/img/random/ (без метаданных).
+imgfromgallery/
+
+# Локальные заметки по устройству сайта
+NOTES.md

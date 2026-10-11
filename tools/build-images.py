@@ -27,6 +27,7 @@ import hashlib
 import shutil
 import subprocess
 import sys
+import tempfile
 import unicodedata
 
 from PIL import Image, ImageOps
@@ -491,6 +492,92 @@ def build_promo():
     print(f"  промо: {human(before)} -> {human(after)}, список в {web_path(PROMO_DATA)}")
 
 
+# --- Случайное фото на главной ------------------------------------------------
+#
+# imgfromgallery/ — оригиналы прямо с телефона (HEIC, DNG, jpg, png), в
+# репозиторий не идут. Скрипт собирает из них лёгкие webp в source/img/random/
+# и список js/random-data.js; главная показывает случайное фото из списка.
+# Номер в подписи (img_from_my_phone:-)#24) — место файла в папке по имени.
+
+RANDOM_SRC = os.path.join(ROOT, "imgfromgallery")
+RANDOM_OUT = os.path.join(IMG, "random")
+RANDOM_DATA = os.path.join(ROOT, "js", "random-data.js")
+# Фото занимает правую половину главной — до ~700 CSS-px, с запасом под ретину.
+RANDOM_EDGE = 1400
+# Детальные снимки (трава, асфальт) на одном качестве весили до 600 КБ, а это
+# первое, что грузит главная. Такие пережимаем ступенчато, пока не влезут.
+RANDOM_QUALITIES = (80, 72, 64)
+RANDOM_MAX_BYTES = 300 * 1024
+# Форматы iPhone и RAW: Pillow их не читает, переводим встроенным в macOS sips.
+SIPS_FORMATS = (".heic", ".heif", ".dng")
+
+
+def open_any(src, tmpdir):
+    if src.lower().endswith(SIPS_FORMATS):
+        tmp = os.path.join(tmpdir, "convert.png")
+        subprocess.run(["sips", "-s", "format", "png", src, "--out", tmp],
+                       check=True, capture_output=True)
+        src = tmp
+    return ImageOps.exif_transpose(Image.open(src))
+
+
+def build_random():
+    if not os.path.isdir(RANDOM_SRC):
+        return
+    os.makedirs(RANDOM_OUT, exist_ok=True)
+    names = sorted(
+        (n for n in os.listdir(RANDOM_SRC)
+         if n.lower().endswith(RASTER + SIPS_FORMATS)),
+        key=natural_key,
+    )
+    data, keep = [], set()
+    before = after = 0
+    with tempfile.TemporaryDirectory() as tmpdir:
+        for name in names:
+            src = os.path.join(RANDOM_SRC, name)
+            # Имя по хешу исходного имени: номер в подписи может сдвинуться,
+            # когда в папку добавят фото, а файл и его свежесть — нет.
+            key = hashlib.md5(display_name(src).encode("utf-8")).hexdigest()[:10]
+            dst = os.path.join(RANDOM_OUT, key + ".webp")
+            keep.add(dst)
+            try:
+                if not fresh(src, dst):
+                    # Сохраняем без EXIF: в фото с телефона записаны координаты
+                    # места съёмки, на сайт они попасть не должны.
+                    im = flatten(open_any(src, tmpdir), WHITE)
+                    im.thumbnail((RANDOM_EDGE, RANDOM_EDGE), Image.LANCZOS)
+                    for quality in RANDOM_QUALITIES:
+                        im.save(dst, "WEBP", quality=quality, method=6)
+                        if os.path.getsize(dst) <= RANDOM_MAX_BYTES:
+                            break
+                    else:
+                        # Ветки и асфальт не ужимаются и на 64 — тогда
+                        # уменьшаем сам снимок на пятую часть.
+                        im.thumbnail((RANDOM_EDGE * 4 // 5,) * 2, Image.LANCZOS)
+                        im.save(dst, "WEBP", quality=RANDOM_QUALITIES[-1], method=6)
+                with Image.open(dst) as im:
+                    size = im.size
+            except Exception as exc:
+                print(f"  ФОТО ПРОПУСК {web_path(src)}: {exc}")
+                continue
+            data.append([web_path(dst), size[0], size[1]])
+            before += os.path.getsize(src)
+            after += os.path.getsize(dst)
+
+    for name in os.listdir(RANDOM_OUT):
+        path = os.path.join(RANDOM_OUT, name)
+        if path not in keep and os.path.isfile(path):
+            os.remove(path)
+
+    with open(RANDOM_DATA, "w", encoding="utf-8") as fh:
+        fh.write("// Собрано tools/build-images.py из imgfromgallery/ — руками не править.\n")
+        fh.write("// [путь, ширина, высота]\n")
+        fh.write("window.RANDOM_IMAGES = ")
+        json.dump(data, fh, ensure_ascii=False, separators=(",", ":"))
+        fh.write(";\n")
+    print(f"  случайные фото: {len(data)} шт., {human(before)} -> {human(after)}")
+
+
 def stamp_assets():
     """Дописать к ссылкам на свои css/js метку версии: main.css?v=<хеш>.
 
@@ -591,8 +678,9 @@ def main():
 
     print()
     build_promo()
-    # После build_promo: он переписывает js/promo-data.js, метка должна
-    # соответствовать уже новому файлу.
+    build_random()
+    # После сборок: они переписывают js/promo-data.js и js/random-data.js,
+    # метка должна соответствовать уже новым файлам.
     stamp_assets()
 
     print(f"\nПересобрано файлов: {built}")
