@@ -578,6 +578,37 @@ def build_random():
     print(f"  случайные фото: {len(data)} шт., {human(before)} -> {human(after)}")
 
 
+# --- Иконка сайта ---------------------------------------------------------------
+#
+# Исходник — source/img/titlepng.png (100×115). Браузеры ждут квадрат: такую
+# картинку они ужимали или обрезали по-разному, а Safari порой не брал вовсе.
+# Собираем квадратные версии: 32px для вкладки и 180px для iPhone
+# (apple-touch-icon — её Safari ищет сам и без неё показывал букву).
+
+FAVICON_SRC = os.path.join(IMG, "titlepng.png")
+FAVICON_OUT = os.path.join(IMG, "favicon")
+
+
+def build_favicons():
+    if not os.path.exists(FAVICON_SRC):
+        return
+    os.makedirs(FAVICON_OUT, exist_ok=True)
+    im = Image.open(FAVICON_SRC).convert("RGBA")
+    side = max(im.size)
+    square = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+    square.paste(im, ((side - im.width) // 2, (side - im.height) // 2))
+
+    tab = os.path.join(FAVICON_OUT, "favicon-32.png")
+    if not fresh(FAVICON_SRC, tab):
+        square.resize((32, 32), Image.LANCZOS).save(tab, optimize=True)
+
+    # Иконка для iPhone должна быть непрозрачной: прозрачные поля iOS
+    # заливает чёрным.
+    touch = os.path.join(FAVICON_OUT, "apple-touch-icon.png")
+    if not fresh(FAVICON_SRC, touch):
+        flatten(square.resize((180, 180), Image.LANCZOS), WHITE).save(touch, optimize=True)
+
+
 def stamp_assets():
     """Дописать к ссылкам на свои css/js метку версии: main.css?v=<хеш>.
 
@@ -590,7 +621,8 @@ def stamp_assets():
         glob.glob(os.path.join(ROOT, "html", "*.html"))
     )
     pattern = re.compile(
-        r'((?:href|src)\s*=\s*")([^"?#:]+\.(?:css|js))(?:\?v=[0-9a-f]*)?(")'
+        r'((?:href|src)\s*=\s*")([^"?#:]+\.(?:css|js)|[^"?#:]*favicon/[^"?#:]+\.png)'
+        r'(?:\?v=[0-9a-f]*)?(")'
     )
     for page in pages:
         base = os.path.dirname(page)
@@ -679,6 +711,7 @@ def main():
     print()
     build_promo()
     build_random()
+    build_favicons()
     # После сборок: они переписывают js/promo-data.js и js/random-data.js,
     # метка должна соответствовать уже новым файлам.
     stamp_assets()
